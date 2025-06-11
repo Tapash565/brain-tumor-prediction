@@ -79,7 +79,8 @@ docs/_build/
 target/
 
 # Jupyter Notebook
-.ipynb_checkpoints
+.ipynb_checkpoints/
+
 
 # IPython
 profile_default/
@@ -133,5 +134,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Dataset
-Brain Tumor/
+# Dataset and notebook files
+Data/
+model.ipynb
+uploads/
