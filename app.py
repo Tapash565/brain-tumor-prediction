@@ -6,11 +6,11 @@ import os
 
 app = Flask(__name__)
 model = load_model("best_model.keras")
-model1 = load_model("model1.keras")
-model2 = load_model("model2.keras")
-model3 = load_model("model3.keras")
+# model1 = load_model("model1.keras")
+# model2 = load_model("model2.keras")
+# model3 = load_model("model3.keras")
 
-models = [model, model1, model2, model3]
+# models = [model, model1, model2, model3]
 
 os.makedirs('uploads', exist_ok=True)
 
@@ -42,9 +42,8 @@ def predict():
     file.save(filepath)
 
     img = preprocess_image(filepath)
-    predictions = [model.predict(img) for model in models]
-    predicted_classes = [prediction[0].argmax() for prediction in predictions]
-    predicted_class = max(set(predicted_classes), key=predicted_classes.count)
+    predictions = model.predict(img)
+    predicted_class = prediction[0].argmax()
 
     if predicted_class == 0:
         result = 'Glioma Tumor'
@@ -56,8 +55,8 @@ def predict():
         result = 'Pituitary Tumor'
     else:
         result = 'Unknown'
-    confidence = [(prediction[0]/ np.sum(prediction))* 100 for prediction in predictions]
-    return render_template('index.html', prediction_text=result, confidence_text=f"Probability: {np.mean([conf[predicted_class] for conf in confidence]):.2f} %")
+    confidence = (prediction[0]/ np.sum(prediction))* 100
+    return render_template('index.html', prediction_text=result, confidence_text=f"Probability: {confidence[predicted_class]:.2f} %")
 
 if __name__ == '__main__':
     app.run(debug=True)
