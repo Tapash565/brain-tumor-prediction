@@ -136,5 +136,4 @@ dmypy.json
 
 # Dataset and notebook files
 Data/
-model.ipynb
 uploads/

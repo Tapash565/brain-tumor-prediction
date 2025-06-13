@@ -1,62 +1,73 @@
-from flask import Flask, request, render_template
+from fastapi import FastAPI, File, UploadFile, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+import uvicorn
 import numpy as np
 from keras.models import load_model
 import cv2
 import os
+import shutil
 
-app = Flask(__name__)
-model = load_model("best_model.keras")
-# model1 = load_model("model1.keras")
-# model2 = load_model("model2.keras")
-# model3 = load_model("model3.keras")
+app = FastAPI()
 
-# models = [model, model1, model2, model3]
+# Mount static directory for CSS and assets
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-os.makedirs('uploads', exist_ok=True)
+# Setup Jinja2 templates
+templates = Jinja2Templates(directory="templates")
 
-def preprocess_image(img_path):
+# Load the Keras model
+model = load_model("model2.keras")
+
+# Ensure 'uploads' directory exists
+os.makedirs("uploads", exist_ok=True)
+
+# Preprocessing helper
+
+def preprocess_image(img_path: str):
     img = cv2.imread(img_path)
     if img is None:
         raise ValueError("Image loading failed.")
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)         
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = cv2.resize(img, (128, 128))
-    img = img / 255.0                                  
-    img = img.reshape(1, 128, 128, 3).astype('float32') 
+    img = img / 255.0
+    img = img.reshape(1, 128, 128, 3).astype('float32')
     return img
-    
-@app.route('/', methods=['GET'])
-def home():
-    return render_template('index.html')
 
+@app.get('/', response_class=HTMLResponse)
+async def get_home(request: Request):
+    return templates.TemplateResponse('index.html', { 'request': request })
 
-@app.route('/predict', methods=['GET','POST'])
-def predict():
-    if 'file' not in request.files:
-        return render_template('index.html', error_message="No file uploaded")
+@app.post('/predict', response_class=HTMLResponse)
+async def post_predict(request: Request, file: UploadFile = File(...)):
+    # Save uploaded file
+    filename = file.filename
+    filepath = os.path.join('uploads', filename)
+    with open(filepath, 'wb') as buffer:
+        shutil.copyfileobj(file.file, buffer)
 
-    file = request.files['file']
-    if file.filename == '':
-        return render_template('index.html', error_message="No selected file")
+    try:
+        img = preprocess_image(filepath)
+        prediction = model.predict(img)
+        predicted_class = int(np.argmax(prediction[0]))
+        confidence = (prediction[0] / np.sum(prediction[0])) * 100
+        labels = ['Glioma Tumor', 'Meningioma Tumor', 'No Tumor', 'Pituitary Tumor']
+        result = labels[predicted_class] if predicted_class < len(labels) else 'Unknown'
+        return templates.TemplateResponse(
+            'index.html',
+            {
+                'request': request,
+                'prediction_text': result,
+                'confidence_text': f"Probability: {confidence[predicted_class]:.2f} %"
+            }
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            'index.html',
+            { 'request': request, 'error_message': str(e) }
+        )
 
-    filepath = os.path.join('uploads', file.filename)
-    file.save(filepath)
-
-    img = preprocess_image(filepath)
-    predictions = model.predict(img)
-    predicted_class = prediction[0].argmax()
-
-    if predicted_class == 0:
-        result = 'Glioma Tumor'
-    elif predicted_class == 1:
-        result = 'Meningioma Tumor' 
-    elif predicted_class == 2:
-        result = 'No Tumor'
-    elif predicted_class == 3:
-        result = 'Pituitary Tumor'
-    else:
-        result = 'Unknown'
-    confidence = (prediction[0]/ np.sum(prediction))* 100
-    return render_template('index.html', prediction_text=result, confidence_text=f"Probability: {confidence[predicted_class]:.2f} %")
-
-if __name__ == '__main__':
-    app.run(debug=True)
+# Run with: uvicorn main:app --reload --host 0.0.0.0 --port 8000
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

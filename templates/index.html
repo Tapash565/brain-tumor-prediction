@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}"> -->
-    <link rel="stylesheet" href="../static/style.css">
+    <link rel="stylesheet" href="/static/style.css">
     <title>Machine Learning Deployment</title>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const input = document.getElementById('file-upload');
             const fileName = document.getElementById('file-name');
-        
             input.addEventListener('change', () => {
                 if (input.files.length > 0) {
                     fileName.textContent = input.files[0].name;
@@ -23,10 +21,8 @@
     <section>
         <h2>Brain Tumor Prediction</h2>
         <form action="/predict" method="post" enctype="multipart/form-data">
-            <label for="file-upload" class="custom-file-upload">
-                Browse
-            </label>    
-            <span id="file-name" style="display:block; margin-top: 10px; color: #555;"></span>
+            <label for="file-upload" class="custom-file-upload">Browse</label>
+            <span id="file-name"></span>
             <input id="file-upload" type="file" name="file" accept=".jpg,.jpeg,.png" required>
             <button type="submit">Predict</button>
         </form>
@@ -42,5 +38,4 @@
         {% endif %}
     </section>
 </body>
-
 </html>
